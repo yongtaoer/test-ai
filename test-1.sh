@@ -2,25 +2,30 @@
 
 set -e
 
+# 获取当前目录名作为仓库名
 REPO_NAME=${PWD##*/}
 GITHUB_USER=$(gh api user --jq .login)
 
-echo "🚧 初始化 Git 仓库..."
+echo "📁 当前项目目录：$REPO_NAME"
+echo "👤 当前 GitHub 用户：$GITHUB_USER"
+
+echo "🔧 初始化 Git 仓库..."
 git init
 git add .
 git commit -m "Initial commit"
 
-echo "🚀 创建 GitHub 仓库 $REPO_NAME ..."
+echo "🚀 创建远程仓库并推送 main 分支..."
 gh repo create "$REPO_NAME" --public --source=. --remote=origin --push
 
-echo "📦 使用 gh-pages 分支发布 GitHub Pages ..."
-gh repo deploy-pages --branch gh-pages --force
+echo "🛠️ 设置 GitHub Pages 发布源为 main 分支根目录..."
+gh api -X PATCH "repos/$GITHUB_USER/$REPO_NAME" -f has_pages=true
+gh api -X PUT "repos/$GITHUB_USER/$REPO_NAME/pages" \
+  -f source.branch="main" \
+  -f source.path="/"
 
-echo "📤 推送 gh-pages 分支"
-git switch -c gh-pages
-git push -u origin gh-pages
+echo "🌍 获取 GitHub Pages URL..."
+sleep 5
+PAGE_URL=$(gh api "repos/$GITHUB_USER/$REPO_NAME/pages" --jq '.html_url')
 
-echo "🌐 获取页面访问地址..."
-sleep 3
-echo "✅ 你的网站将很快可访问："
-echo "https://$GITHUB_USER.github.io/$REPO_NAME/"
+echo "✅ 部署成功！你可以通过以下地址访问你的站点："
+echo "$PAGE_URL"
