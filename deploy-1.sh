@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # 需要设置的 GitHub 仓库名和分支
-REPO_NAME="your-repository-name" # 修改为你的 GitHub 仓库名
+REPO_NAME="test-ai" # 修改为你的 GitHub 仓库名
 BRANCH_NAME="main" # 如果你的主分支是 master 请改成 master
-GH_USERNAME="your-github-username" # 修改为你的 GitHub 用户名
+GH_USERNAME="yongtaoer" # 修改为你的 GitHub 用户名
 
 # 检查 GitHub CLI 是否安装
 if ! command -v gh &> /dev/null
