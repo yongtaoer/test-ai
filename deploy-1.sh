@@ -1,58 +1,42 @@
 #!/bin/bash
-set -e
 
-# 检查是否安装 GitHub CLI
-if ! command -v gh &> /dev/null; then
-    echo "Error: GitHub CLI 未安装，请先访问 https://cli.github.com 安装"
+# 需要设置的 GitHub 仓库名和分支
+REPO_NAME="your-repository-name" # 修改为你的 GitHub 仓库名
+BRANCH_NAME="main" # 如果你的主分支是 master 请改成 master
+GH_USERNAME="your-github-username" # 修改为你的 GitHub 用户名
+
+# 检查 GitHub CLI 是否安装
+if ! command -v gh &> /dev/null
+then
+    echo "GitHub CLI (gh) 未安装，请安装它以继续"
     exit 1
 fi
 
-# 验证登录状态
-if ! gh auth status &> /dev/null; then
-    echo "请先执行 GitHub 登录：gh auth login"
-    exit 1
-fi
-
-# 获取当前目录名作为仓库名
-REPO_NAME=$(basename $(pwd))
-
-# 检查仓库是否存在
-if ! gh repo view $REPO_NAME &> /dev/null; then
-    echo "创建新仓库: $REPO_NAME"
-    gh repo create $REPO_NAME --public --push --source .
-else
-    # 推送现有改动到 main 分支
+# 检查是否已经在当前目录下初始化 git 仓库
+if [ ! -d ".git" ]; then
+    echo "未检测到 git 仓库，正在初始化..."
+    git init
     git add .
-    git commit -m "Auto-commit by deployment script" || true
-    git push origin main
+    git commit -m "initial commit"
 fi
 
-# 切换到 gh-pages 分支（如果不存在则创建）
-git checkout --orphan gh-pages 2>/dev/null || git checkout gh-pages
+# 设置远程仓库
+git remote set-url origin https://github.com/$GH_USERNAME/$REPO_NAME.git
 
-# 清理旧文件（保留.git目录）
-find . -path ./.git -prune -o -exec rm -rf {} \; 2>/dev/null
-
-# 复制所有文件（包括隐藏文件，排除.git目录）
-cp -r ../$REPO_NAME/{.,}* . 2>/dev/null || true
-
-# 提交并强制推送
+# 提交代码并推送到 GitHub 仓库
 git add .
-git commit -m "Auto-deploy $(date +'%Y-%m-%d %H:%M:%S')"
-git push -f origin gh-pages
+git commit -m "Automated deployment"
+git push -u origin $BRANCH_NAME
 
-# 返回 main 分支
-git checkout main
+# 启用 GitHub Pages（设置 GitHub Pages 目标分支）
+echo "正在启用 GitHub Pages..."
 
-# 启用 GitHub Pages
-gh api repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/pages \
-    --method POST \
-    -F build_type=workflow \
-    -F source.branch=gh-pages \
-    -F source.path=/ &> /dev/null || true
+# 如果已经启用了 GitHub Pages，则不会更改
+gh repo edit --enable-pages --source main
 
-# 获取并显示预览地址
-sleep 5  # 等待部署初始化
-echo "正在获取预览地址..."
-DEPLOY_URL=$(gh api repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/pages -q .html_url)
-echo "部署成功！预览地址：$DEPLOY_URL"
+# 获取 GitHub Pages 地址
+echo "GitHub Pages 地址:"
+echo "https://$GH_USERNAME.github.io/$REPO_NAME/"
+
+# 完成
+echo "部署完成！你可以在上面的链接查看项目的预览。"
